@@ -2,7 +2,8 @@ function Features() {
   const features = [
     {
       title: "AI Interview",
-      description: "Practice HR and technical interviews with AI-powered feedback.",
+      description:
+        "Practice HR and technical interviews with AI-powered feedback.",
       icon: "🤖",
     },
     {
@@ -12,31 +13,36 @@ function Features() {
     },
     {
       title: "Coding Practice",
-      description: "Solve coding problems and prepare for technical rounds.",
+      description:
+        "Solve coding problems and prepare for technical rounds.",
       icon: "💻",
     },
     {
       title: "Aptitude Tests",
-      description: "Practice quantitative, logical, and verbal reasoning.",
+      description:
+        "Practice quantitative, logical, and verbal reasoning.",
       icon: "📝",
     },
     {
       title: "Progress Tracker",
-      description: "Monitor your interview preparation journey.",
+      description:
+        "Monitor your interview preparation journey.",
       icon: "📊",
     },
     {
       title: "Learning Roadmap",
-      description: "Get personalized preparation plans for your dream role.",
+      description:
+        "Get personalized preparation plans for your dream role.",
       icon: "🎯",
     },
   ];
 
   return (
     <section
-     id="features"
-     className="bg-gray-100 py-16 px-6">
-      <h2 className="text-4xl font-bold text-center mb-10">
+      id="features"
+      className="bg-gray-100 dark:bg-slate-900 py-20 px-6 transition-colors duration-300"
+    >
+      <h2 className="text-4xl font-bold text-center mb-12 text-slate-900 dark:text-white">
         Our Features
       </h2>
 
@@ -44,7 +50,7 @@ function Features() {
         {features.map((feature, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-lg p-6 hover:scale-105 transition duration-300"
+            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl shadow-lg p-6 hover:scale-105 hover:bg-cyan-50 dark:hover:bg-slate-700 transition duration-300"
           >
             <div className="text-5xl mb-4">{feature.icon}</div>
 
@@ -52,7 +58,7 @@ function Features() {
               {feature.title}
             </h3>
 
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               {feature.description}
             </p>
           </div>

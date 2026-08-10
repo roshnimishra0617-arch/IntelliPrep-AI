@@ -21,9 +21,10 @@ function Testimonials() {
   ];
 
   return (
-    <section className="py-20 bg-gray-100">
-      <div className="max-w-6xl mx-auto px-6">
-        <h2 className="text-4xl font-bold text-center mb-12">
+    <section className="bg-gray-100 dark:bg-slate-900 py-20 px-6 transition-colors duration-300">
+      <div className="max-w-6xl mx-auto">
+
+        <h2 className="text-4xl font-bold text-center mb-12 text-slate-900 dark:text-white">
           What Our Users Say
         </h2>
 
@@ -31,19 +32,25 @@ function Testimonials() {
           {testimonials.map((item, index) => (
             <div
               key={index}
-              className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl transition duration-300"
+              className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-lg p-8 hover:shadow-2xl hover:bg-cyan-50 dark:hover:bg-slate-700 transition duration-300"
             >
-              <p className="text-gray-600 italic">
+              <p className="text-gray-600 dark:text-gray-300 italic">
                 "{item.review}"
               </p>
 
               <div className="mt-6">
-                <h3 className="font-bold text-xl">{item.name}</h3>
-                <p className="text-cyan-600">{item.role}</p>
+                <h3 className="font-bold text-xl">
+                  {item.name}
+                </h3>
+
+                <p className="text-cyan-600 dark:text-cyan-400">
+                  {item.role}
+                </p>
               </div>
             </div>
           ))}
         </div>
+
       </div>
     </section>
   );

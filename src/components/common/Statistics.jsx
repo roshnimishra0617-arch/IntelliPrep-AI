@@ -7,18 +7,19 @@ function Statistics() {
   ];
 
   return (
-    <section className="bg-slate-900 text-white py-20">
+    <section className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white py-20 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="bg-slate-800 rounded-2xl p-8 hover:bg-cyan-600 transition duration-300"
+              className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-md hover:bg-cyan-500 hover:text-white transition duration-300"
             >
-              <h2 className="text-4xl font-bold text-cyan-400">
+              <h2 className="text-4xl font-bold text-cyan-500 dark:text-cyan-400">
                 {stat.number}
               </h2>
-              <p className="mt-2 text-gray-300">
+
+              <p className="mt-2 text-gray-600 dark:text-gray-300">
                 {stat.label}
               </p>
             </div>
