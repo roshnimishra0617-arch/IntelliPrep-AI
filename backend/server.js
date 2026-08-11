@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import multer from "multer";
+import { PDFParse } from "pdf-parse";
 import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
@@ -14,6 +16,17 @@ const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// ==========================================
+// FILE UPLOAD
+// ==========================================
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB
+  },
+});
 
 // ==========================================
 // GEMINI AI
@@ -47,14 +60,14 @@ app.post("/api/test-ai", async (req, res) => {
 
     console.log("Gemini response:", response.text);
 
-    res.json({
+    return res.json({
       success: true,
       question: response.text,
     });
   } catch (error) {
-    console.error("Gemini Test Error:", error.message);
+    console.error("Gemini Test Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message || "Failed to connect to Gemini API",
     });
@@ -75,10 +88,6 @@ app.post("/api/start-interview", async (req, res) => {
   } = req.body;
 
   try {
-    // --------------------------------------
-    // VALIDATION
-    // --------------------------------------
-
     if (
       !role ||
       !interviewType ||
@@ -100,10 +109,6 @@ app.post("/api/start-interview", async (req, res) => {
         message: "Question count must be 5, 10 or 15.",
       });
     }
-
-    // --------------------------------------
-    // GEMINI PROMPT
-    // --------------------------------------
 
     const prompt = `
 You are an expert AI interviewer for IntelliPrep-AI.
@@ -146,23 +151,10 @@ The questions array must contain exactly ${count} questions.
       `Generating ${count} questions with Gemini...`
     );
 
-    // --------------------------------------
-    // ONE GEMINI REQUEST
-    // --------------------------------------
-
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
     });
-
-    console.log(
-      "Gemini Questions Response:",
-      response.text
-    );
-
-    // --------------------------------------
-    // CLEAN RESPONSE
-    // --------------------------------------
 
     const cleanedText = response.text
       .replace(/```json/g, "")
@@ -170,10 +162,6 @@ The questions array must contain exactly ${count} questions.
       .trim();
 
     const result = JSON.parse(cleanedText);
-
-    // --------------------------------------
-    // VALIDATE RESPONSE
-    // --------------------------------------
 
     if (
       !result.questions ||
@@ -196,51 +184,33 @@ The questions array must contain exactly ${count} questions.
     });
 
   } catch (error) {
-    // --------------------------------------
-    // FALLBACK QUESTIONS
-    // --------------------------------------
-
     console.error(
-      "GEMINI QUESTION ERROR:",
+      "Gemini Question Error:",
       error.message
     );
 
     const fallbackQuestions = [
       "Explain the difference between a stack and a queue.",
-
       "What is object-oriented programming and what are its main principles?",
-
       "What is the difference between == and === in JavaScript?",
-
       "Explain what an API is and how a REST API works.",
-
       "What is the purpose of a database in a software application?",
-
       "What is the difference between frontend and backend development?",
-
       "Explain the concept of exception handling.",
-
       "What is version control and why is Git commonly used?",
-
       "What is the difference between SQL and NoSQL databases?",
-
       "Explain what an algorithm is and why time complexity matters.",
-
       "What is a data structure? Give two examples.",
-
       "Explain the software development life cycle.",
-
       "What is the purpose of testing in software development?",
-
       "What is responsive web design?",
-
       "What is the difference between authentication and authorization?",
     ];
 
     const requestedCount =
       Number(questionCount) || 5;
 
-    const count = Math.min(
+    const safeCount = Math.min(
       requestedCount,
       fallbackQuestions.length
     );
@@ -252,20 +222,16 @@ The questions array must contain exactly ${count} questions.
     return res.json({
       success: true,
       source: "fallback",
-      questions: fallbackQuestions.slice(0, count),
+      questions: fallbackQuestions.slice(0, safeCount),
     });
   }
 });
 
 // ==========================================
-// EVALUATE ANSWER
+// EVALUATE INTERVIEW ANSWER
 // ==========================================
 
 app.post("/api/evaluate-answer", async (req, res) => {
-  // IMPORTANT:
-  // These variables are outside try so that
-  // the catch block can also access "answer".
-
   const {
     role,
     interviewType,
@@ -275,10 +241,6 @@ app.post("/api/evaluate-answer", async (req, res) => {
   } = req.body;
 
   try {
-    // --------------------------------------
-    // VALIDATION
-    // --------------------------------------
-
     if (
       !role ||
       !interviewType ||
@@ -292,10 +254,6 @@ app.post("/api/evaluate-answer", async (req, res) => {
           "Role, interview type, difficulty, question and answer are required.",
       });
     }
-
-    // --------------------------------------
-    // GEMINI PROMPT
-    // --------------------------------------
 
     const prompt = `
 You are an expert AI interviewer evaluating a candidate's interview answer.
@@ -353,23 +311,10 @@ Rules:
       "Evaluating answer with Gemini..."
     );
 
-    // --------------------------------------
-    // GEMINI REQUEST
-    // --------------------------------------
-
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
     });
-
-    console.log(
-      "Gemini Evaluation Response:",
-      response.text
-    );
-
-    // --------------------------------------
-    // CLEAN RESPONSE
-    // --------------------------------------
 
     const cleanedText = response.text
       .replace(/```json/g, "")
@@ -392,18 +337,10 @@ Rules:
     });
 
   } catch (error) {
-    // --------------------------------------
-    // FALLBACK EVALUATION
-    // --------------------------------------
-
     console.error(
-      "GEMINI EVALUATION ERROR:",
+      "Gemini Evaluation Error:",
       error.message
     );
-
-    // --------------------------------------
-    // CALCULATE SIMPLE FALLBACK SCORE
-    // --------------------------------------
 
     const answerLength = answer
       ? answer.trim().length
@@ -430,17 +367,13 @@ Rules:
     return res.json({
       success: true,
       source: "fallback",
-
-      score: score,
-
+      score,
       feedback:
         "Your answer has been recorded successfully. Add more technical details, examples and explanations to improve your response.",
-
       strengths: [
         "Attempted the interview question",
         "Provided a direct response",
       ],
-
       improvements: [
         "Add more technical details",
         "Include a practical example",
@@ -449,6 +382,275 @@ Rules:
     });
   }
 });
+
+// ==========================================
+// RESUME ANALYZER
+// ==========================================
+
+app.post(
+  "/api/analyze-resume",
+  upload.single("resume"),
+  async (req, res) => {
+    let parser = null;
+
+    try {
+      // --------------------------------------
+      // CHECK FILE
+      // --------------------------------------
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please upload a PDF resume.",
+        });
+      }
+
+      // --------------------------------------
+      // CHECK FILE TYPE
+      // --------------------------------------
+
+      if (req.file.mimetype !== "application/pdf") {
+        return res.status(400).json({
+          success: false,
+          message: "Only PDF files are allowed.",
+        });
+      }
+
+      console.log(
+        "=========================================="
+      );
+      console.log(
+        "Resume received:",
+        req.file.originalname
+      );
+      console.log(
+        "File size:",
+        req.file.size,
+        "bytes"
+      );
+      console.log(
+        "=========================================="
+      );
+
+      // --------------------------------------
+      // EXTRACT PDF TEXT
+      // --------------------------------------
+
+      console.log("Extracting PDF text...");
+
+      parser = new PDFParse({
+        data: req.file.buffer,
+      });
+
+      const pdfData = await parser.getText();
+
+      const resumeText = pdfData.text
+        ? pdfData.text.trim()
+        : "";
+
+      // --------------------------------------
+      // CHECK EXTRACTED TEXT
+      // --------------------------------------
+
+      console.log(
+        "Extracted resume text length:",
+        resumeText.length
+      );
+
+      if (!resumeText) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Could not extract text from this PDF. Please upload a text-based resume.",
+        });
+      }
+
+      // --------------------------------------
+      // LIMIT TEXT SENT TO AI
+      // --------------------------------------
+
+      const MAX_RESUME_LENGTH = 30000;
+
+      const limitedResumeText =
+        resumeText.length > MAX_RESUME_LENGTH
+          ? resumeText.substring(0, MAX_RESUME_LENGTH)
+          : resumeText;
+
+      console.log(
+        "Text being sent to Gemini:",
+        limitedResumeText.length,
+        "characters"
+      );
+
+      // --------------------------------------
+      // RESUME ANALYSIS PROMPT
+      // --------------------------------------
+
+      const prompt = `
+You are an expert resume reviewer and ATS specialist.
+
+Analyze the following resume carefully.
+
+RESUME:
+
+${limitedResumeText}
+
+Provide a professional resume analysis.
+
+Return ONLY valid JSON in exactly this structure:
+
+{
+  "atsScore": 85,
+  "summary": "Short overall assessment of the resume.",
+  "skills": [
+    "JavaScript",
+    "React",
+    "Node.js"
+  ],
+  "strengths": [
+    "Strong technical skills",
+    "Good project experience"
+  ],
+  "weaknesses": [
+    "Limited measurable achievements",
+    "Some sections need improvement"
+  ],
+  "missingKeywords": [
+    "REST API",
+    "Testing"
+  ],
+  "improvements": [
+    "Add measurable results to project descriptions",
+    "Improve the professional summary"
+  ],
+  "sections": {
+    "contact": "Good",
+    "summary": "Needs improvement",
+    "education": "Good",
+    "experience": "Good",
+    "projects": "Good",
+    "skills": "Good"
+  }
+}
+
+Rules:
+- atsScore must be between 0 and 100.
+- Identify skills that actually appear in the resume.
+- Do not invent experience.
+- Missing keywords should be useful industry keywords that could strengthen the resume.
+- Keep feedback practical and concise.
+- Return ONLY JSON.
+- Do not use markdown.
+- Do not use code fences.
+`;
+
+      // --------------------------------------
+      // GEMINI REQUEST
+      // --------------------------------------
+
+      console.log(
+        "Sending resume text to Gemini..."
+      );
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
+
+      console.log(
+        "Gemini responded successfully."
+      );
+
+      console.log(
+        "Gemini resume response:",
+        response.text
+      );
+
+      // --------------------------------------
+      // CLEAN GEMINI RESPONSE
+      // --------------------------------------
+
+      const cleanedText = response.text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const analysis = JSON.parse(cleanedText);
+
+      // --------------------------------------
+      // SUCCESS
+      // --------------------------------------
+
+      console.log(
+        "Resume analysis completed successfully."
+      );
+
+      return res.json({
+        success: true,
+        source: "gemini",
+        fileName: req.file.originalname,
+        analysis,
+      });
+
+    } catch (error) {
+
+      // --------------------------------------
+      // FULL ERROR LOG
+      // --------------------------------------
+
+      console.error(
+        "=========================================="
+      );
+
+      console.error(
+        "FULL RESUME ANALYSIS ERROR"
+      );
+
+      console.error(
+        "Error name:",
+        error?.name
+      );
+
+      console.error(
+        "Error message:",
+        error?.message
+      );
+
+      console.error(
+        "Full error:",
+        error
+      );
+
+      console.error(
+        "=========================================="
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          error?.message ||
+          "Failed to analyze resume.",
+      });
+
+    } finally {
+
+      // --------------------------------------
+      // CLEAN PDF PARSER
+      // --------------------------------------
+
+      if (parser) {
+        try {
+          await parser.destroy();
+        } catch (cleanupError) {
+          console.error(
+            "PDF parser cleanup error:",
+            cleanupError.message
+          );
+        }
+      }
+    }
+  }
+);
 
 // ==========================================
 // START SERVER

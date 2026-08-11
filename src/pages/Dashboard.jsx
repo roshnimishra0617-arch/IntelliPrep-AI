@@ -23,45 +23,57 @@ function Dashboard() {
   const preparationCards = [
     {
       title: "AI Interview",
-      description: "Practice HR and technical interviews with AI-powered feedback.",
+      description:
+        "Practice HR and technical interviews with AI-powered feedback.",
       icon: <BrainCircuit size={30} />,
       progress: "65%",
       color: "text-cyan-400",
+      path: "/ai-interview",
     },
     {
       title: "Resume Analyzer",
-      description: "Analyze and improve your resume for better ATS performance.",
+      description:
+        "Analyze and improve your resume for better ATS performance.",
       icon: <FileText size={30} />,
       progress: "80%",
       color: "text-green-400",
+      path: "/resume-analyzer",
     },
     {
       title: "Coding Practice",
-      description: "Solve coding problems and prepare for technical rounds.",
+      description:
+        "Solve coding problems and prepare for technical rounds.",
       icon: <Code2 size={30} />,
       progress: "55%",
       color: "text-yellow-400",
+      path: "#",
     },
     {
       title: "Aptitude Tests",
-      description: "Practice quantitative, logical and verbal reasoning.",
+      description:
+        "Practice quantitative, logical and verbal reasoning.",
       icon: <ClipboardCheck size={30} />,
       progress: "70%",
       color: "text-purple-400",
+      path: "#",
     },
     {
       title: "Learning Roadmap",
-      description: "Follow a personalized preparation plan for your target role.",
+      description:
+        "Follow a personalized preparation plan for your target role.",
       icon: <Target size={30} />,
       progress: "45%",
       color: "text-pink-400",
+      path: "#",
     },
     {
       title: "Progress Tracker",
-      description: "Monitor your overall interview preparation journey.",
+      description:
+        "Monitor your overall interview preparation journey.",
       icon: <BarChart3 size={30} />,
       progress: "68%",
       color: "text-blue-400",
+      path: "#",
     },
   ];
 
@@ -70,7 +82,6 @@ function Dashboard() {
 
       {/* Navbar */}
       <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-6 py-4">
-
         <div className="max-w-7xl mx-auto flex items-center justify-between">
 
           <Link
@@ -99,7 +110,6 @@ function Dashboard() {
             </button>
 
           </div>
-
         </div>
       </nav>
 
@@ -231,12 +241,13 @@ function Dashboard() {
 
               </div>
 
-               <Link
-  to="/ai-interview"
-  className="block w-full mt-6 text-center border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-white py-2.5 rounded-lg font-medium transition"
->
-  Continue
-</Link>
+              {/* Continue Button */}
+              <Link
+                to={card.path}
+                className="block w-full mt-6 text-center border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-white py-2.5 rounded-lg font-medium transition"
+              >
+                Continue
+              </Link>
 
             </div>
           ))}

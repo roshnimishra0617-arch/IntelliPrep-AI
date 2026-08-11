@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import AIInterview from "./pages/AIInterview";
 
 import { useAuth } from "./context/AuthContext";
+import ResumeAnalyzer from "./pages/ResumeAnalyzer";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -45,6 +46,17 @@ function App() {
   element={
     <ProtectedRoute>
       <AIInterview />
+    </ProtectedRoute>
+  }
+
+  
+/>
+
+<Route
+  path="/resume-analyzer"
+  element={
+    <ProtectedRoute>
+      <ResumeAnalyzer />
     </ProtectedRoute>
   }
 />
