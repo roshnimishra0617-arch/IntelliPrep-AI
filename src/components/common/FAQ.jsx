@@ -5,9 +5,9 @@ function FAQ() {
 
   const questions = [
     {
-      question: "What is IntelliPrep-AI?",
+      question: "What is PrepVyera-AI?",
       answer:
-        "IntelliPrep-AI is an AI-powered platform designed to help students and job seekers prepare for interviews, coding rounds, aptitude tests, and resume screening.",
+        "PrepVyera-AI is an AI-powered platform designed to help students and job seekers prepare for interviews, coding rounds, aptitude tests, and resume screening.",
     },
     {
       question: "How does the AI interview work?",
@@ -15,7 +15,7 @@ function FAQ() {
         "The platform generates interview questions based on your selected role and provides feedback on your answers to help you improve.",
     },
     {
-      question: "Can IntelliPrep-AI analyze my resume?",
+      question: "Can PrepVyera-AI analyze my resume?",
       answer:
         "Yes. The Resume Analyzer will evaluate your resume and provide suggestions to improve its content and ATS compatibility.",
     },
@@ -25,7 +25,7 @@ function FAQ() {
         "Yes. Your dashboard will provide progress information across interviews, coding practice, aptitude tests, and other preparation activities.",
     },
     {
-      question: "Is IntelliPrep-AI suitable for beginners?",
+      question: "Is PrepVyera-AI suitable for beginners?",
       answer:
         "Yes. The platform is designed for learners at different skill levels and can provide personalized preparation guidance.",
     },
@@ -43,7 +43,7 @@ function FAQ() {
         </h2>
 
         <p className="text-center text-gray-600 dark:text-gray-300 mt-4 mb-10">
-          Everything you need to know about IntelliPrep-AI.
+          Everything you need to know about PrepVyera-AI.
         </p>
 
         <div className="space-y-4">

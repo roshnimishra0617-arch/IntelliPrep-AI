@@ -9,6 +9,7 @@ import AIInterview from "./pages/AIInterview";
 
 import { useAuth } from "./context/AuthContext";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
+import CodingPractice from "./pages/CodingPractice";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -57,6 +58,15 @@ function App() {
   element={
     <ProtectedRoute>
       <ResumeAnalyzer />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/coding-practice"
+  element={
+    <ProtectedRoute>
+      <CodingPractice />
     </ProtectedRoute>
   }
 />

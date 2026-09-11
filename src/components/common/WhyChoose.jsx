@@ -19,7 +19,7 @@ function WhyChoose() {
       <div className="max-w-6xl mx-auto">
 
         <h2 className="text-4xl font-bold text-center mb-12 text-slate-900 dark:text-white">
-          Why Choose IntelliPrep-AI?
+          Why Choose PrepVyera-AI?
         </h2>
 
         <div className="grid md:grid-cols-3 gap-8">

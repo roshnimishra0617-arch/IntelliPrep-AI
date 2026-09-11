@@ -10,45 +10,77 @@ dotenv.config();
 const app = express();
 const PORT = 5000;
 
-// ==========================================
+// =====================================================
 // MIDDLEWARE
-// ==========================================
+// =====================================================
 
 app.use(cors());
-app.use(express.json());
 
-// ==========================================
+app.use(express.json({ limit: "2mb" }));
+
+app.use(express.urlencoded({ extended: true }));
+
+// =====================================================
 // FILE UPLOAD
-// ==========================================
+// =====================================================
 
 const upload = multer({
   storage: multer.memoryStorage(),
+
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 5 * 1024 * 1024,
   },
 });
 
-// ==========================================
+// =====================================================
 // GEMINI AI
-// ==========================================
+// =====================================================
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-// ==========================================
+// =====================================================
+// HELPER - CLEAN GEMINI JSON
+// =====================================================
+
+function cleanGeminiJson(text) {
+  if (!text) {
+    throw new Error("Gemini returned an empty response.");
+  }
+
+  let cleaned = String(text).trim();
+
+  // Remove markdown code fences
+  cleaned = cleaned
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  // Find JSON object if Gemini added extra text
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  return JSON.parse(cleaned);
+}
+
+// =====================================================
 // HOME ROUTE
-// ==========================================
+// =====================================================
 
 app.get("/", (req, res) => {
   res.json({
-    message: "IntelliPrep-AI Backend is running 🚀",
+    message: "PrepVyera-AI Backend is running 🚀",
   });
 });
 
-// ==========================================
+// =====================================================
 // TEST GEMINI
-// ==========================================
+// =====================================================
 
 app.post("/api/test-ai", async (req, res) => {
   try {
@@ -69,15 +101,16 @@ app.post("/api/test-ai", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to connect to Gemini API",
+      message:
+        error?.message || "Failed to connect to Gemini API",
     });
   }
 });
 
-// ==========================================
+// =====================================================
 // START INTERVIEW
-// GENERATE ALL QUESTIONS IN ONE REQUEST
-// ==========================================
+// GENERATE ALL QUESTIONS IN ONE GEMINI REQUEST
+// =====================================================
 
 app.post("/api/start-interview", async (req, res) => {
   const {
@@ -85,9 +118,13 @@ app.post("/api/start-interview", async (req, res) => {
     interviewType,
     difficulty,
     questionCount,
-  } = req.body;
+  } = req.body || {};
 
   try {
+    // -----------------------------------------------
+    // VALIDATION
+    // -----------------------------------------------
+
     if (
       !role ||
       !interviewType ||
@@ -106,12 +143,17 @@ app.post("/api/start-interview", async (req, res) => {
     if (![5, 10, 15].includes(count)) {
       return res.status(400).json({
         success: false,
-        message: "Question count must be 5, 10 or 15.",
+        message:
+          "Question count must be 5, 10 or 15.",
       });
     }
 
+    // -----------------------------------------------
+    // PROMPT
+    // -----------------------------------------------
+
     const prompt = `
-You are an expert AI interviewer for IntelliPrep-AI.
+You are an expert AI interviewer for PrepVyera-AI.
 
 Generate exactly ${count} interview questions.
 
@@ -125,6 +167,7 @@ Difficulty:
 ${difficulty}
 
 Requirements:
+
 - Generate exactly ${count} questions.
 - Questions must be relevant to the candidate role.
 - Questions must match the interview type.
@@ -148,20 +191,23 @@ The questions array must contain exactly ${count} questions.
 `;
 
     console.log(
-      `Generating ${count} questions with Gemini...`
+      `Generating ${count} interview questions with Gemini...`
     );
+
+    // -----------------------------------------------
+    // GEMINI REQUEST
+    // -----------------------------------------------
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
     });
 
-    const cleanedText = response.text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // -----------------------------------------------
+    // PARSE RESPONSE
+    // -----------------------------------------------
 
-    const result = JSON.parse(cleanedText);
+    const result = cleanGeminiJson(response.text);
 
     if (
       !result.questions ||
@@ -174,7 +220,7 @@ The questions array must contain exactly ${count} questions.
     }
 
     console.log(
-      "Real Gemini questions generated successfully."
+      "Real Gemini interview questions generated successfully."
     );
 
     return res.json({
@@ -182,12 +228,15 @@ The questions array must contain exactly ${count} questions.
       source: "gemini",
       questions: result.questions,
     });
-
   } catch (error) {
     console.error(
       "Gemini Question Error:",
-      error.message
+      error?.message || error
     );
+
+    // -----------------------------------------------
+    // FALLBACK QUESTIONS
+    // -----------------------------------------------
 
     const fallbackQuestions = [
       "Explain the difference between a stack and a queue.",
@@ -207,8 +256,7 @@ The questions array must contain exactly ${count} questions.
       "What is the difference between authentication and authorization?",
     ];
 
-    const requestedCount =
-      Number(questionCount) || 5;
+    const requestedCount = Number(questionCount) || 5;
 
     const safeCount = Math.min(
       requestedCount,
@@ -227,9 +275,9 @@ The questions array must contain exactly ${count} questions.
   }
 });
 
-// ==========================================
+// =====================================================
 // EVALUATE INTERVIEW ANSWER
-// ==========================================
+// =====================================================
 
 app.post("/api/evaluate-answer", async (req, res) => {
   const {
@@ -238,9 +286,13 @@ app.post("/api/evaluate-answer", async (req, res) => {
     difficulty,
     question,
     answer,
-  } = req.body;
+  } = req.body || {};
 
   try {
+    // -----------------------------------------------
+    // VALIDATION
+    // -----------------------------------------------
+
     if (
       !role ||
       !interviewType ||
@@ -254,6 +306,10 @@ app.post("/api/evaluate-answer", async (req, res) => {
           "Role, interview type, difficulty, question and answer are required.",
       });
     }
+
+    // -----------------------------------------------
+    // PROMPT
+    // -----------------------------------------------
 
     const prompt = `
 You are an expert AI interviewer evaluating a candidate's interview answer.
@@ -299,6 +355,7 @@ Return ONLY valid JSON:
 }
 
 Rules:
+
 - Score must be between 0 and 10.
 - Give at least 2 strengths.
 - Give at least 2 improvements.
@@ -311,17 +368,22 @@ Rules:
       "Evaluating answer with Gemini..."
     );
 
+    // -----------------------------------------------
+    // GEMINI REQUEST
+    // -----------------------------------------------
+
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
     });
 
-    const cleanedText = response.text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // -----------------------------------------------
+    // PARSE RESPONSE
+    // -----------------------------------------------
 
-    const evaluation = JSON.parse(cleanedText);
+    const evaluation = cleanGeminiJson(
+      response.text
+    );
 
     console.log(
       "Real Gemini evaluation generated successfully."
@@ -335,12 +397,15 @@ Rules:
       strengths: evaluation.strengths || [],
       improvements: evaluation.improvements || [],
     });
-
   } catch (error) {
     console.error(
       "Gemini Evaluation Error:",
-      error.message
+      error?.message || error
     );
+
+    // -----------------------------------------------
+    // FALLBACK EVALUATION
+    // -----------------------------------------------
 
     const answerLength = answer
       ? answer.trim().length
@@ -368,12 +433,15 @@ Rules:
       success: true,
       source: "fallback",
       score,
+
       feedback:
         "Your answer has been recorded successfully. Add more technical details, examples and explanations to improve your response.",
+
       strengths: [
         "Attempted the interview question",
         "Provided a direct response",
       ],
+
       improvements: [
         "Add more technical details",
         "Include a practical example",
@@ -383,9 +451,9 @@ Rules:
   }
 });
 
-// ==========================================
+// =====================================================
 // RESUME ANALYZER
-// ==========================================
+// =====================================================
 
 app.post(
   "/api/analyze-resume",
@@ -394,9 +462,9 @@ app.post(
     let parser = null;
 
     try {
-      // --------------------------------------
+      // -----------------------------------------------
       // CHECK FILE
-      // --------------------------------------
+      // -----------------------------------------------
 
       if (!req.file) {
         return res.status(400).json({
@@ -405,9 +473,9 @@ app.post(
         });
       }
 
-      // --------------------------------------
+      // -----------------------------------------------
       // CHECK FILE TYPE
-      // --------------------------------------
+      // -----------------------------------------------
 
       if (req.file.mimetype !== "application/pdf") {
         return res.status(400).json({
@@ -419,24 +487,29 @@ app.post(
       console.log(
         "=========================================="
       );
+
       console.log(
         "Resume received:",
         req.file.originalname
       );
+
       console.log(
         "File size:",
         req.file.size,
         "bytes"
       );
+
       console.log(
         "=========================================="
       );
 
-      // --------------------------------------
+      // -----------------------------------------------
       // EXTRACT PDF TEXT
-      // --------------------------------------
+      // -----------------------------------------------
 
-      console.log("Extracting PDF text...");
+      console.log(
+        "Extracting PDF text..."
+      );
 
       parser = new PDFParse({
         data: req.file.buffer,
@@ -448,9 +521,9 @@ app.post(
         ? pdfData.text.trim()
         : "";
 
-      // --------------------------------------
+      // -----------------------------------------------
       // CHECK EXTRACTED TEXT
-      // --------------------------------------
+      // -----------------------------------------------
 
       console.log(
         "Extracted resume text length:",
@@ -465,15 +538,18 @@ app.post(
         });
       }
 
-      // --------------------------------------
-      // LIMIT TEXT SENT TO AI
-      // --------------------------------------
+      // -----------------------------------------------
+      // LIMIT RESUME TEXT
+      // -----------------------------------------------
 
       const MAX_RESUME_LENGTH = 30000;
 
       const limitedResumeText =
         resumeText.length > MAX_RESUME_LENGTH
-          ? resumeText.substring(0, MAX_RESUME_LENGTH)
+          ? resumeText.substring(
+              0,
+              MAX_RESUME_LENGTH
+            )
           : resumeText;
 
       console.log(
@@ -482,9 +558,9 @@ app.post(
         "characters"
       );
 
-      // --------------------------------------
+      // -----------------------------------------------
       // RESUME ANALYSIS PROMPT
-      // --------------------------------------
+      // -----------------------------------------------
 
       const prompt = `
 You are an expert resume reviewer and ATS specialist.
@@ -534,6 +610,7 @@ Return ONLY valid JSON in exactly this structure:
 }
 
 Rules:
+
 - atsScore must be between 0 and 100.
 - Identify skills that actually appear in the resume.
 - Do not invent experience.
@@ -544,9 +621,9 @@ Rules:
 - Do not use code fences.
 `;
 
-      // --------------------------------------
+      // -----------------------------------------------
       // GEMINI REQUEST
-      // --------------------------------------
+      // -----------------------------------------------
 
       console.log(
         "Sending resume text to Gemini..."
@@ -566,20 +643,17 @@ Rules:
         response.text
       );
 
-      // --------------------------------------
-      // CLEAN GEMINI RESPONSE
-      // --------------------------------------
+      // -----------------------------------------------
+      // PARSE GEMINI RESPONSE
+      // -----------------------------------------------
 
-      const cleanedText = response.text
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+      const analysis = cleanGeminiJson(
+        response.text
+      );
 
-      const analysis = JSON.parse(cleanedText);
-
-      // --------------------------------------
+      // -----------------------------------------------
       // SUCCESS
-      // --------------------------------------
+      // -----------------------------------------------
 
       console.log(
         "Resume analysis completed successfully."
@@ -591,12 +665,10 @@ Rules:
         fileName: req.file.originalname,
         analysis,
       });
-
     } catch (error) {
-
-      // --------------------------------------
+      // -----------------------------------------------
       // FULL ERROR LOG
-      // --------------------------------------
+      // -----------------------------------------------
 
       console.error(
         "=========================================="
@@ -631,12 +703,10 @@ Rules:
           error?.message ||
           "Failed to analyze resume.",
       });
-
     } finally {
-
-      // --------------------------------------
+      // -----------------------------------------------
       // CLEAN PDF PARSER
-      // --------------------------------------
+      // -----------------------------------------------
 
       if (parser) {
         try {
@@ -652,9 +722,341 @@ Rules:
   }
 );
 
-// ==========================================
+// =====================================================
+// AI CODING PRACTICE
+// GENERATE QUESTIONS
+// TECHNOLOGY + DIFFICULTY + QUESTION COUNT
+// =====================================================
+
+app.post(
+  "/api/generate-coding-questions",
+  async (req, res) => {
+    try {
+      const {
+        technology,
+        difficulty,
+        questionCount,
+      } = req.body || {};
+
+      // -----------------------------------------------
+      // VALIDATION
+      // -----------------------------------------------
+
+      if (
+        !technology ||
+        !difficulty ||
+        !questionCount
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Technology, difficulty and question count are required.",
+        });
+      }
+
+      const count = Number(questionCount);
+
+      if (![5, 10, 15, 20].includes(count)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Question count must be 5, 10, 15 or 20.",
+        });
+      }
+
+      // -----------------------------------------------
+      // PROMPT
+      // -----------------------------------------------
+
+      const prompt = `
+You are an expert coding interview question generator for PrepVyera-AI.
+
+Generate exactly ${count} coding practice questions.
+
+Technology:
+${technology}
+
+Difficulty:
+${difficulty}
+
+IMPORTANT RULES:
+
+1. Every question MUST be solvable using ${technology}.
+2. Do not mix programming languages.
+3. Questions must match the requested difficulty: ${difficulty}.
+4. Questions should be useful for technical interview preparation.
+5. Include different topics such as arrays, strings, searching,
+   sorting, hash maps, recursion, linked lists, trees, graphs,
+   or dynamic programming when appropriate for the difficulty.
+6. Do not provide solutions.
+7. Return ONLY valid JSON.
+8. Do not use markdown code fences.
+9. Generate exactly ${count} questions.
+10. Do not repeat questions.
+
+Return exactly this structure:
+
+{
+  "questions": [
+    {
+      "title": "Question title",
+      "difficulty": "${difficulty}",
+      "topic": "Topic",
+      "description": "Clear problem statement",
+      "constraints": [
+        "Constraint 1",
+        "Constraint 2"
+      ],
+      "exampleInput": "Example input",
+      "exampleOutput": "Example output"
+    }
+  ]
+}
+
+The questions array MUST contain exactly ${count} questions.
+`;
+
+      console.log(
+        `Generating ${count} coding questions for ${technology} - ${difficulty}...`
+      );
+
+      // -----------------------------------------------
+      // GEMINI REQUEST
+      // -----------------------------------------------
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
+
+      // -----------------------------------------------
+      // PARSE RESPONSE
+      // -----------------------------------------------
+
+      const parsed = cleanGeminiJson(
+        response.text
+      );
+
+      if (
+        !parsed.questions ||
+        !Array.isArray(parsed.questions) ||
+        parsed.questions.length !== count
+      ) {
+        throw new Error(
+          `Invalid Gemini response. Expected ${count} coding questions.`
+        );
+      }
+
+      console.log(
+        `${count} coding questions generated successfully.`
+      );
+
+      return res.json({
+        success: true,
+        source: "gemini",
+        technology,
+        difficulty,
+        questionCount: count,
+        questions: parsed.questions,
+      });
+    } catch (error) {
+      console.error(
+        "Coding Questions Error:",
+        error?.message || error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          error?.message ||
+          "Failed to generate coding questions.",
+      });
+    }
+  }
+);
+
+// =====================================================
+// AI CODING PRACTICE
+// EVALUATE SOLUTION
+// =====================================================
+
+app.post(
+  "/api/evaluate-coding-solution",
+  async (req, res) => {
+    try {
+      const {
+        technology,
+        difficulty,
+        question,
+        solution,
+      } = req.body || {};
+
+      // -----------------------------------------------
+      // VALIDATION
+      // -----------------------------------------------
+
+      if (
+        !technology ||
+        !difficulty ||
+        !question ||
+        !solution
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Technology, difficulty, question and solution are required.",
+        });
+      }
+
+      // -----------------------------------------------
+      // PROMPT
+      // -----------------------------------------------
+
+      const prompt = `
+You are an expert programming interviewer evaluating a candidate's coding solution.
+
+Technology:
+${technology}
+
+Difficulty:
+${difficulty}
+
+Coding Question:
+${JSON.stringify(question, null, 2)}
+
+Candidate Solution:
+${solution}
+
+Evaluate the candidate's solution carefully.
+
+Evaluate based on:
+
+1. Correctness of the solution
+2. Logic and approach
+3. Code quality
+4. Time and space complexity
+5. Whether the solution properly addresses the given problem
+
+Return ONLY valid JSON.
+
+Use exactly this structure:
+
+{
+  "score": 8,
+  "correctness": "The solution correctly handles the main requirements.",
+  "feedback": "Short and useful overall feedback.",
+  "complexity": "Time: O(n), Space: O(1)",
+  "strengths": [
+    "Strength 1",
+    "Strength 2"
+  ],
+  "improvements": [
+    "Improvement 1",
+    "Improvement 2"
+  ]
+}
+
+Rules:
+
+- Score must be between 0 and 10.
+- Give at least 2 strengths.
+- Give at least 2 improvements.
+- Do not provide a complete replacement solution.
+- Do not invent requirements that are not present in the question.
+- Be fair when evaluating the candidate's code.
+- If the code has syntax errors, mention them clearly.
+- If the logic is incorrect, explain why.
+- Keep the feedback practical.
+- Return ONLY JSON.
+- Do not use markdown.
+- Do not use code fences.
+`;
+
+      console.log(
+        `Evaluating ${technology} coding solution with Gemini...`
+      );
+
+      // -----------------------------------------------
+      // GEMINI REQUEST
+      // -----------------------------------------------
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
+
+      // -----------------------------------------------
+      // PARSE GEMINI RESPONSE
+      // -----------------------------------------------
+
+      const evaluation = cleanGeminiJson(
+        response.text
+      );
+
+      // -----------------------------------------------
+      // VALIDATE SCORE
+      // -----------------------------------------------
+
+      const score = Number(evaluation.score);
+
+      if (
+        !Number.isFinite(score) ||
+        score < 0 ||
+        score > 10
+      ) {
+        throw new Error(
+          "Invalid evaluation score returned by Gemini."
+        );
+      }
+
+      // -----------------------------------------------
+      // SUCCESS
+      // -----------------------------------------------
+
+      console.log(
+        "Coding solution evaluated successfully."
+      );
+
+      return res.json({
+        success: true,
+        source: "gemini",
+        evaluation: {
+          score,
+          correctness:
+            evaluation.correctness || "",
+          feedback:
+            evaluation.feedback || "",
+          complexity:
+            evaluation.complexity || "",
+          strengths:
+            Array.isArray(evaluation.strengths)
+              ? evaluation.strengths
+              : [],
+          improvements:
+            Array.isArray(evaluation.improvements)
+              ? evaluation.improvements
+              : [],
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Coding Solution Evaluation Error:",
+        error?.message || error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          error?.message ||
+          "Failed to evaluate coding solution.",
+      });
+    }
+  }
+);
+
+// =====================================================
 // START SERVER
-// ==========================================
+// =====================================================
 
 app.listen(PORT, "127.0.0.1", () => {
   console.log(

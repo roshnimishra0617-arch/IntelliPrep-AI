@@ -4,7 +4,7 @@ function Testimonials() {
       name: "Rahul Sharma",
       role: "Software Engineer",
       review:
-        "IntelliPrep-AI helped me prepare for interviews with confidence. The mock interviews were incredibly useful.",
+        "PrepVyera-AI helped me prepare for interviews with confidence. The mock interviews were incredibly useful.",
     },
     {
       name: "Priya Verma",

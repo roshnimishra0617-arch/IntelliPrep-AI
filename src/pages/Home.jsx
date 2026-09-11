@@ -9,6 +9,7 @@ import Statistics from "../components/common/Statistics";
 import Testimonials from "../components/common/Testimonials";
 import FAQ from "../components/common/FAQ";
 import Contact from "../components/common/Contact";
+ 
 
 function Home() {
   return (
@@ -17,7 +18,11 @@ function Home() {
 
       {/* Main Hero Section */}
       <section className="min-h-screen bg-gradient-to-br from-white via-slate-100 to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-900 text-slate-900 dark:text-white flex flex-col justify-center items-center px-6 transition-colors duration-300">
-
+<img
+  src="/team-photo.jpeg"
+  alt="PrepVeyra AI Team"
+  className="relative w-full rounded-3xl shadow-2xl object-cover"
+/>
         <h1 className="text-6xl md:text-7xl font-extrabold text-cyan-500 dark:text-cyan-400 mb-6 text-center">
           Ace Your Dream Job 🚀
         </h1>
@@ -57,7 +62,7 @@ function Home() {
       {/* Features */}
       <Features />
 
-      {/* Why Choose IntelliPrep-AI */}
+      {/* Why Choose PrepVyera-AI */}
       <WhyChoose />
 
       {/* Testimonials */}

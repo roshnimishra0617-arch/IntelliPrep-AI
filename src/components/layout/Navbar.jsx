@@ -15,7 +15,7 @@ function Navbar() {
           to="/"
           className="text-2xl font-bold text-cyan-500"
         >
-          IntelliPrep-AI
+          PrepVyera-AI
         </Link>
 
         {/* Desktop Navigation */}

@@ -21,7 +21,7 @@ function Hero() {
           </h1>
 
           <p className="mt-6 text-lg text-gray-600 dark:text-gray-300 leading-8">
-            IntelliPrep-AI helps students and professionals prepare for
+            PrepVyera-AI helps students and professionals prepare for
             interviews with AI-powered mock interviews, resume analysis,
             coding practice, aptitude tests, and personalized learning
             roadmaps.

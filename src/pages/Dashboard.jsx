@@ -46,7 +46,7 @@ function Dashboard() {
       icon: <Code2 size={30} />,
       progress: "55%",
       color: "text-yellow-400",
-      path: "#",
+      path: "/coding-practice",
     },
     {
       title: "Aptitude Tests",
@@ -88,7 +88,7 @@ function Dashboard() {
             to="/"
             className="text-2xl font-bold text-cyan-500"
           >
-            IntelliPrep-AI
+            PrepVyera-AI
           </Link>
 
           <div className="flex items-center gap-4">

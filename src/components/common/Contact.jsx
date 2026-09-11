@@ -27,11 +27,11 @@ function Contact() {
 
             <p className="text-gray-600 dark:text-gray-300 leading-7 mb-8">
               Whether you have a question, suggestion, or want to learn
-              more about IntelliPrep-AI, feel free to reach out.
+              more about PrepVyera-AI, feel free to reach out.
             </p>
 
             <div className="space-y-5">
-              <p>📧 support@intelliprep-ai.com</p>
+              <p>📧 support@prepvyera-ai.com</p>
               <p>💼 LinkedIn</p>
               <p>🐙 GitHub</p>
             </div>

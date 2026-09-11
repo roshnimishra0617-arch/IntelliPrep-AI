@@ -214,7 +214,7 @@ function AIInterview() {
             to="/dashboard"
             className="text-2xl font-bold text-cyan-500"
           >
-            IntelliPrep-AI
+            PrepVyera-AI
           </Link>
 
           <Link
@@ -571,7 +571,7 @@ function AIInterview() {
       </h2>
 
       <p className="text-gray-600 dark:text-gray-400 mt-4">
-        Great job! Here is your IntelliPrep-AI interview performance.
+        Great job! Here is your PrepVyera-AI interview performance.
       </p>
 
     </div>
