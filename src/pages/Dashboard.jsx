@@ -51,11 +51,11 @@ function Dashboard() {
     {
       title: "Aptitude Tests",
       description:
-        "Practice quantitative, logical and verbal reasoning.",
+        "Practice quantitative, logical and verbal reasoning with AI-generated questions.",
       icon: <ClipboardCheck size={30} />,
       progress: "70%",
       color: "text-purple-400",
-      path: "#",
+      path: "/aptitude",
     },
     {
       title: "Learning Roadmap",
@@ -64,7 +64,7 @@ function Dashboard() {
       icon: <Target size={30} />,
       progress: "45%",
       color: "text-pink-400",
-      path: "#",
+      path: "/learning-roadmap",
     },
     {
       title: "Progress Tracker",
@@ -73,7 +73,7 @@ function Dashboard() {
       icon: <BarChart3 size={30} />,
       progress: "68%",
       color: "text-blue-400",
-      path: "#",
+      path: "/progress-tracker",
     },
   ];
 
@@ -84,6 +84,7 @@ function Dashboard() {
       <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
 
+          {/* Logo */}
           <Link
             to="/"
             className="text-2xl font-bold text-cyan-500"
@@ -91,6 +92,7 @@ function Dashboard() {
             PrepVyera-AI
           </Link>
 
+          {/* Navbar Actions */}
           <div className="flex items-center gap-4">
 
             <Link
@@ -136,6 +138,7 @@ function Dashboard() {
         {/* Statistics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
 
+          {/* Overall Progress */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-slate-800">
             <p className="text-gray-500 dark:text-gray-400">
               Overall Progress
@@ -146,6 +149,7 @@ function Dashboard() {
             </h2>
           </div>
 
+          {/* Interviews */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-slate-800">
             <p className="text-gray-500 dark:text-gray-400">
               Interviews
@@ -156,6 +160,7 @@ function Dashboard() {
             </h2>
           </div>
 
+          {/* Coding Problems */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-slate-800">
             <p className="text-gray-500 dark:text-gray-400">
               Coding Problems
@@ -166,6 +171,7 @@ function Dashboard() {
             </h2>
           </div>
 
+          {/* Aptitude Tests */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-gray-200 dark:border-slate-800">
             <p className="text-gray-500 dark:text-gray-400">
               Aptitude Tests
@@ -260,3 +266,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

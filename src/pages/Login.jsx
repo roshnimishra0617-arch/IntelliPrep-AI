@@ -19,7 +19,7 @@ function Login() {
     }
 
     const registeredUser = localStorage.getItem(
-      "intelliprep_registered_user"
+       "prepvyera_registered_user"
     );
 
     if (!registeredUser) {

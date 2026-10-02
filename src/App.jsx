@@ -10,6 +10,9 @@ import AIInterview from "./pages/AIInterview";
 import { useAuth } from "./context/AuthContext";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
 import CodingPractice from "./pages/CodingPractice";
+import Aptitude from "./pages/Aptitude";
+import LearningRoadmap from "./pages/LearningRoadmap";
+import ProgressTracker from "./pages/ProgressTracker";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -67,6 +70,33 @@ function App() {
   element={
     <ProtectedRoute>
       <CodingPractice />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/aptitude"
+  element={
+  <ProtectedRoute>
+    <Aptitude />
+  </ProtectedRoute>
+   }
+/>
+
+<Route
+  path="/learning-roadmap"
+  element={
+    <ProtectedRoute>
+      <LearningRoadmap />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/progress-tracker"
+  element={
+    <ProtectedRoute>
+      <ProgressTracker />
     </ProtectedRoute>
   }
 />
