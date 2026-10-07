@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,8 +19,10 @@ import {
 import { useTheme } from "../context/ThemeContext";
 
 function ProgressTracker() {
+  
   const { darkMode } = useTheme();
-
+  const { user } = useAuth();
+  
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -35,7 +38,7 @@ function ProgressTracker() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/progress"
+        `http://localhost:5000/api/progress/${user.id}`
       );
 
       const data = await response.json();
@@ -110,9 +113,11 @@ function ProgressTracker() {
   // INITIAL LOAD
   // ==========================================
 
-  useEffect(() => {
+ useEffect(() => {
+  if (user?.id) {
     loadProgress();
-  }, []);
+  }
+}, [user]);
 
   // ==========================================
   // MODULE DATA

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,6 +19,8 @@ import {
 } from "lucide-react";
 
 function LearningRoadmap() {
+  const { user } = useAuth();
+
   const [targetRole, setTargetRole] = useState("");
   const [skills, setSkills] = useState("");
   const [experience, setExperience] = useState("Beginner");
@@ -26,6 +29,7 @@ function LearningRoadmap() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [roadmapData, setRoadmapData] = useState(null);
+  const [completedWeeks, setCompletedWeeks] = useState([]);
 
   // =====================================================
   // GENERATE AI ROADMAP
@@ -101,6 +105,80 @@ function LearningRoadmap() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // =====================================================
+  // SAVE ROADMAP PROGRESS
+  // =====================================================
+
+  const handleWeekCompletion = async (weekIndex) => {
+    if (!user?.id || !roadmapData?.roadmap) {
+      return;
+    }
+
+    const totalTasks = roadmapData.roadmap.length;
+
+    let updatedCompletedWeeks;
+
+    if (completedWeeks.includes(weekIndex)) {
+      updatedCompletedWeeks = completedWeeks.filter(
+        (index) => index !== weekIndex
+      );
+    } else {
+      updatedCompletedWeeks = [
+        ...completedWeeks,
+        weekIndex,
+      ];
+    }
+
+    setCompletedWeeks(updatedCompletedWeeks);
+
+    const completedTasks =
+      updatedCompletedWeeks.length;
+
+    const progress =
+      totalTasks > 0
+        ? Math.round(
+            (completedTasks / totalTasks) * 100
+          )
+        : 0;
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/save-roadmap-progress",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            completedTasks,
+            totalTasks,
+            progress,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ||
+            "Failed to save roadmap progress."
+        );
+      }
+
+      console.log(
+        "Roadmap progress saved successfully:",
+        progress
+      );
+    } catch (error) {
+      console.error(
+        "Roadmap Progress Error:",
+        error
+      );
     }
   };
 
@@ -574,32 +652,52 @@ function LearningRoadmap() {
 
                           <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
 
-                            <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-cyan-500 text-white flex items-center justify-center font-bold text-lg">
+                             <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-cyan-500 text-white flex items-center justify-center font-bold text-lg">
 
-                              {week.week ||
-                                index + 1}
-
-                            </div>
-
-                            <div>
-
-                              <p className="text-sm text-cyan-500 font-semibold uppercase tracking-wide">
-
-                                Week{" "}
                                 {week.week ||
                                   index + 1}
 
-                              </p>
+                              </div>
 
-                              <h3 className="text-2xl font-bold">
+                              <div className="flex-1">
 
-                                {week.title}
+                                <p className="text-sm text-cyan-500 font-semibold uppercase tracking-wide">
 
-                              </h3>
+                                  Week{" "}
+                                  {week.week ||
+                                    index + 1}
+
+                                </p>
+
+                                  <h3 className="text-2xl font-bold">
+
+                                    {week.title}
+
+                                  </h3>
+
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleWeekCompletion(index)
+                                }
+                                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold transition ${
+                                  completedWeeks.includes(index)
+                                    ? "bg-green-500 text-white"
+                                    : "bg-cyan-500 text-white hover:bg-cyan-600"
+                                }`}
+                              >
+
+                              <CheckCircle size={18} />
+
+                              {completedWeeks.includes(index)
+                                ? "Completed"
+                                : "Complete Week"}
+
+                              </button>
 
                             </div>
-
-                          </div>
 
                           {/* Goal */}
 

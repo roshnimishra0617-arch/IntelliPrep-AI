@@ -14,6 +14,9 @@ import Aptitude from "./pages/Aptitude";
 import LearningRoadmap from "./pages/LearningRoadmap";
 import ProgressTracker from "./pages/ProgressTracker";
 
+import TestBackend from "./TestBackend";
+
+
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
 
@@ -31,9 +34,12 @@ function App() {
       {/* Public Routes */}
       <Route path="/" element={<Home />} />
 
+       <Route path="/test-backend" element={<TestBackend />} />
+
       <Route path="/login" element={<Login />} />
 
       <Route path="/register" element={<Register />} />
+      
 
       {/* Protected Dashboard */}
       <Route
@@ -107,5 +113,7 @@ function App() {
     </Routes>
   );
 }
+
+
 
 export default App;

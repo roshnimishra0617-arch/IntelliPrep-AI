@@ -10,38 +10,48 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+  const handleLogin = async (e) => {
+  e.preventDefault();
 
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
+  if (!email || !password) {
+    alert("Please enter email and password");
+    return;
+  }
 
-    const registeredUser = localStorage.getItem(
-       "prepvyera_registered_user"
-    );
+  try {
+    const response = await fetch("http://localhost:5000/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password: password,
+      }),
+    });
 
-    if (!registeredUser) {
-      alert("No account found. Please register first.");
-      navigate("/register");
-      return;
-    }
+    const data = await response.json();
 
-    const user = JSON.parse(registeredUser);
-
-    if (email !== user.email || password !== user.password) {
-      alert("Invalid email or password");
+    if (!response.ok) {
+      alert(data.message || "Invalid email or password");
       return;
     }
 
     login({
-      name: user.name,
-      email: user.email,
+      id: data.user.id,
+      name: data.user.name,
+      email: data.user.email,
+      mobile: data.user.mobile,
     });
 
+    alert("Login successful!");
+
     navigate("/dashboard");
-  };
+  } catch (error) {
+    console.error("Login Error:", error);
+    alert("Unable to connect to the backend.");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-900 flex items-center justify-center px-6">

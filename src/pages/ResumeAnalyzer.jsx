@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   ArrowLeft,
   Upload,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 function ResumeAnalyzer() {
+  const { user } = useAuth();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -55,6 +57,7 @@ function ResumeAnalyzer() {
     try {
       const formData = new FormData();
       formData.append("resume", file);
+      formData.append("userId", user.id);
 
       const response = await fetch(
         "http://localhost:5000/api/analyze-resume",

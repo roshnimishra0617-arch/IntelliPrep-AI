@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import multer from "multer";
 import { PDFParse } from "pdf-parse";
 import { GoogleGenAI } from "@google/genai";
+import bcrypt from "bcryptjs";
+import pool from "./db.js";
+
 
 dotenv.config();
 
@@ -281,6 +284,7 @@ The questions array must contain exactly ${count} questions.
 
 app.post("/api/evaluate-answer", async (req, res) => {
   const {
+    userId,
     role,
     interviewType,
     difficulty,
@@ -294,6 +298,7 @@ app.post("/api/evaluate-answer", async (req, res) => {
     // -----------------------------------------------
 
     if (
+      !userId ||
       !role ||
       !interviewType ||
       !difficulty ||
@@ -389,6 +394,31 @@ Rules:
       "Real Gemini evaluation generated successfully."
     );
 
+    // -----------------------------------------------
+   // SAVE INTERVIEW SCORE TO DATABASE
+  // -----------------------------------------------
+
+  const interviewScore = Number(evaluation.score);
+
+  if (
+    !Number.isFinite(interviewScore) ||
+    interviewScore < 0 ||
+    interviewScore > 10
+  ) {
+    throw new Error("Invalid interview score returned by Gemini.");
+ }
+
+  const interviewPercentage = Math.round(
+    (interviewScore / 10) * 100
+  );
+
+  await pool.query(
+    `INSERT INTO interview_results (user_id, score)
+     VALUES ($1, $2)`,
+     [userId, interviewPercentage]
+  );
+
+
     return res.json({
       success: true,
       source: "gemini",
@@ -470,6 +500,15 @@ app.post(
         return res.status(400).json({
           success: false,
           message: "Please upload a PDF resume.",
+        });
+      }
+
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "User ID is required.",
         });
       }
 
@@ -650,6 +689,29 @@ Rules:
       const analysis = cleanGeminiJson(
         response.text
       );
+
+      // -----------------------------------------------
+     // SAVE ATS SCORE TO DATABASE
+    // -----------------------------------------------
+
+    const atsScore = Number(analysis.atsScore);
+
+    if (
+      !Number.isInteger(atsScore) ||
+      atsScore < 0 ||
+      atsScore > 100
+    ) {
+      return res.status(500).json({
+        success: false,
+        message: "Invalid ATS score returned by AI.",
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO resume_results (user_id, ats_score)
+       VALUES ($1, $2)`,
+      [userId, atsScore]
+    );
 
       // -----------------------------------------------
       // SUCCESS
@@ -885,6 +947,7 @@ app.post(
   async (req, res) => {
     try {
       const {
+        userId,
         technology,
         difficulty,
         question,
@@ -896,6 +959,7 @@ app.post(
       // -----------------------------------------------
 
       if (
+        !userId  ||
         !technology ||
         !difficulty ||
         !question ||
@@ -1008,6 +1072,16 @@ Rules:
           "Invalid evaluation score returned by Gemini."
         );
       }
+
+      const codingPercentage = Math.round(
+        (score / 10) * 100
+      );
+
+      await pool.query(
+        `INSERT INTO coding_results (user_id, score)
+        VALUES ($1, $2)`,
+        [userId, codingPercentage]
+      );
 
       // -----------------------------------------------
       // SUCCESS
@@ -1275,6 +1349,7 @@ The questions array MUST contain exactly ${count} questions.
 });
 
 
+
 // =====================================================
 // AI APTITUDE MODULE
 // ANALYZE TEST PERFORMANCE
@@ -1283,6 +1358,7 @@ The questions array MUST contain exactly ${count} questions.
 app.post("/api/analyze-aptitude", async (req, res) => {
   try {
     const {
+      userId,
       category,
       difficulty,
       score,
@@ -1298,6 +1374,7 @@ app.post("/api/analyze-aptitude", async (req, res) => {
     // -------------------------------------------------
 
     if (
+      !userId ||
       !category ||
       !difficulty ||
       !totalQuestions ||
@@ -1309,6 +1386,37 @@ app.post("/api/analyze-aptitude", async (req, res) => {
           "Aptitude performance data is incomplete.",
       });
     }
+
+    // -------------------------------------------------
+    // VALIDATE SCORE
+    // -------------------------------------------------
+
+    const aptitudeScore = Number(score);
+
+    if (
+      !Number.isFinite(aptitudeScore) ||
+      aptitudeScore < 0 ||
+      aptitudeScore > 100
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid aptitude score.",
+      });
+    }
+
+    // -------------------------------------------------
+    // SAVE SCORE TO DATABASE FIRST
+    // -------------------------------------------------
+
+    await pool.query(
+      `INSERT INTO aptitude_results (user_id, score)
+       VALUES ($1, $2)`,
+      [userId, aptitudeScore]
+    );
+
+    console.log(
+      `Aptitude score ${aptitudeScore}% saved for user ${userId}.`
+    );
 
     // -------------------------------------------------
     // AI PERFORMANCE ANALYSIS
@@ -1338,7 +1446,7 @@ UNANSWERED:
 ${unanswered}
 
 SCORE:
-${score}%
+${aptitudeScore}%
 
 TOPIC PERFORMANCE:
 ${JSON.stringify(topicPerformance, null, 2)}
@@ -1381,20 +1489,54 @@ Rules:
       "Analyzing aptitude performance with Gemini..."
     );
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-    });
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
 
-    const analysis = cleanGeminiJson(
-      response.text
-    );
+      const analysis = cleanGeminiJson(
+        response.text
+      );
 
-    return res.json({
-      success: true,
-      source: "gemini",
-      analysis,
-    });
+      return res.json({
+        success: true,
+        source: "gemini",
+        analysis,
+        score: aptitudeScore,
+      });
+    } catch (aiError) {
+      // -------------------------------------------------
+      // GEMINI FAILED, BUT SCORE IS ALREADY SAVED
+      // -------------------------------------------------
+
+      console.error(
+        "Gemini aptitude analysis unavailable:",
+        aiError?.message || aiError
+      );
+
+      return res.json({
+        success: true,
+        source: "database",
+        analysis: {
+          summary:
+            "Your aptitude test has been evaluated successfully. AI analysis is temporarily unavailable.",
+          strengths: [
+            "Completed the aptitude test",
+            "Attempted the questions",
+          ],
+          weakAreas: [],
+          recommendations: [
+            "Review the questions you answered incorrectly.",
+            "Practice more questions from your weaker topics.",
+            "Attempt another aptitude test to improve your score.",
+          ],
+          nextStep:
+            "Take another aptitude practice test and compare your performance.",
+        },
+        score: aptitudeScore,
+      });
+    }
   } catch (error) {
     console.error(
       "AI Aptitude Analysis Error:",
@@ -1403,10 +1545,9 @@ Rules:
 
     return res.status(500).json({
       success: false,
-      source: "gemini",
       message:
         error?.message ||
-        "AI could not analyze the aptitude performance.",
+        "Failed to save aptitude performance.",
     });
   }
 });
@@ -1706,48 +1847,323 @@ IMPORTANT:
   }
 });
 
+// =====================================================
+// SAVE ROADMAP PROGRESS
+// =====================================================
+
+app.post("/api/save-roadmap-progress", async (req, res) => {
+  try {
+    const {
+      userId,
+      completedTasks,
+      totalTasks,
+      progress,
+    } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required.",
+      });
+    }
+
+    if (
+      !Number.isInteger(completedTasks) ||
+      !Number.isInteger(totalTasks) ||
+      !Number.isInteger(progress)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid roadmap progress data.",
+      });
+    }
+
+    if (
+      completedTasks < 0 ||
+      totalTasks < 0 ||
+      completedTasks > totalTasks ||
+      progress < 0 ||
+      progress > 100
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid roadmap progress values.",
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO roadmap_progress
+       (user_id, completed_tasks, total_tasks, progress)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        userId,
+        completedTasks,
+        totalTasks,
+        progress,
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: "Roadmap progress saved successfully.",
+    });
+  } catch (error) {
+    console.error(
+      "Save Roadmap Progress Error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to save roadmap progress.",
+    });
+  }
+});
+
+
 // ==========================================
 // PROGRESS TRACKER
 // ==========================================
 
-app.get("/api/progress", async (req, res) => {
+app.get("/api/progress/:id", async (req, res) => {
   try {
-    // Temporary dynamic structure.
-    // Later we will connect this with actual
-    // interview, coding, aptitude and roadmap data.
+    const { id } = req.params;
+
+    // Get latest AI Interview score
+    const interviewResult = await pool.query(
+      `SELECT score
+       FROM interview_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get latest Resume ATS score
+    const resumeResult = await pool.query(
+      `SELECT ats_score
+       FROM resume_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get latest Coding score
+    const codingResult = await pool.query(
+      `SELECT score
+       FROM coding_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get latest Aptitude score
+    const aptitudeResult = await pool.query(
+      `SELECT score
+       FROM aptitude_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get latest Roadmap progress
+    const roadmapResult = await pool.query(
+      `SELECT completed_tasks, total_tasks, progress
+       FROM roadmap_progress
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get total AI Interview attempts
+const interviewAttemptsResult = await pool.query(
+  `SELECT COUNT(*) AS count
+   FROM interview_results
+   WHERE user_id = $1`,
+  [id]
+);
+
+// Get total Coding Problem attempts
+const codingAttemptsResult = await pool.query(
+  `SELECT COUNT(*) AS count
+   FROM coding_results
+   WHERE user_id = $1`,
+  [id]
+);
+
+// Get total Aptitude Test attempts
+const aptitudeAttemptsResult = await pool.query(
+  `SELECT COUNT(*) AS count
+   FROM aptitude_results
+   WHERE user_id = $1`,
+  [id]
+);
+
+    // -----------------------------------------------
+    // MODULE SCORES
+    // -----------------------------------------------
+
+    const interviewScore =
+      interviewResult.rows.length > 0
+        ? Number(interviewResult.rows[0].score)
+        : 0;
+
+    const resumeScore =
+      resumeResult.rows.length > 0
+        ? Number(resumeResult.rows[0].ats_score)
+        : 0;
+
+    const codingScore =
+      codingResult.rows.length > 0
+        ? Number(codingResult.rows[0].score)
+        : 0;
+
+    const aptitudeScore =
+      aptitudeResult.rows.length > 0
+        ? Number(aptitudeResult.rows[0].score)
+        : 0;
+
+    const roadmapScore =
+      roadmapResult.rows.length > 0
+        ? Number(roadmapResult.rows[0].progress)
+        : 0;
+
+      const interviewAttempts = Number(
+        interviewAttemptsResult.rows[0].count
+      );
+
+      const codingAttempts = Number(
+        codingAttemptsResult.rows[0].count
+      );
+
+      const aptitudeAttempts = Number(
+        aptitudeAttemptsResult.rows[0].count
+      );
+
+    // -----------------------------------------------
+    // OVERALL SCORE
+    // -----------------------------------------------
+
+    const overallScore = Math.round(
+      (
+        interviewScore +
+        resumeScore +
+        codingScore +
+        aptitudeScore +
+        roadmapScore
+      ) / 5
+    );
+
+    // -----------------------------------------------
+  // IMPROVEMENT CALCULATION
+  // -----------------------------------------------
+
+  // Get the previous overall score
+  const previousProgressResult = await pool.query(
+    `SELECT overall_score
+    FROM overall_progress
+    WHERE user_id = $1
+    ORDER BY created_at DESC
+    LIMIT 1`,
+    [id]
+  );
+
+  let improvement = 0;
+
+    if (previousProgressResult.rows.length > 0) {
+      const previousOverallScore = Number(
+      previousProgressResult.rows[0].overall_score
+   );
+
+    improvement = overallScore - previousOverallScore;
+  }
+
+  // Save the current overall score
+  await pool.query(
+    `INSERT INTO overall_progress (user_id, overall_score)
+    VALUES ($1, $2)`,
+    [id, overallScore]
+  );
+
+    // -----------------------------------------------
+    // COMPLETED COUNTS
+    // -----------------------------------------------
+
+    const interviewCompleted =
+      interviewResult.rows.length > 0 ? 1 : 0;
+
+    const resumeCompleted =
+      resumeResult.rows.length > 0 ? 1 : 0;
+
+    const codingCompleted =
+      codingResult.rows.length > 0 ? 1 : 0;
+
+    const aptitudeCompleted =
+      aptitudeResult.rows.length > 0 ? 1 : 0;
+
+    const roadmapCompleted =
+      roadmapResult.rows.length > 0
+        ? Number(roadmapResult.rows[0].completed_tasks)
+        : 0;
+
+    // Tests completed
+    const testsCompleted =
+      interviewCompleted +
+      codingCompleted +
+      aptitudeCompleted;
+
+    // Tasks completed
+    const tasksCompleted = roadmapCompleted;
+
+    // Milestones
+    const milestonesCompleted = [
+      interviewScore,
+      resumeScore,
+      codingScore,
+      aptitudeScore,
+      roadmapScore,
+    ].filter((score) => score >= 80).length;
 
     const progress = {
-      overallScore: 0,
-      improvement: 0,
+      overallScore,
+      improvement,
 
-      milestonesCompleted: 0,
-      testsCompleted: 0,
-      tasksCompleted: 0,
+      milestonesCompleted,
+      testsCompleted,
+      tasksCompleted,
+
+      interviewAttempts,
+      codingAttempts,
+      aptitudeAttempts,
 
       modules: {
         interview: {
-          score: 0,
-          completed: 0,
+          score: interviewScore,
+          completed: interviewCompleted,
         },
 
         resume: {
-          score: 0,
-          completed: 0,
+          score: resumeScore,
+          completed: resumeCompleted,
         },
 
         coding: {
-          score: 0,
-          completed: 0,
+          score: codingScore,
+          completed: codingCompleted,
         },
 
         aptitude: {
-          score: 0,
-          completed: 0,
+          score: aptitudeScore,
+          completed: aptitudeCompleted,
         },
 
         roadmap: {
-          score: 0,
-          completed: 0,
+          score: roadmapScore,
+          completed: roadmapCompleted,
         },
       },
 
@@ -1763,7 +2179,7 @@ app.get("/api/progress", async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to load progress.",
+      message: "Failed to load user progress.",
     });
   }
 });
@@ -1845,6 +2261,369 @@ Do not include code fences.
     });
   }
 });
+
+// =====================================================
+// TEST POSTGRESQL CONNECTION
+// =====================================================
+
+pool.query("SELECT NOW()")
+  .then(() => {
+    console.log("PostgreSQL connected successfully ✅");
+  })
+  .catch((error) => {
+    console.error("PostgreSQL connection failed ❌", error);
+  });
+  
+  app.get("/test-db", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+
+    res.json({
+      success: true,
+      message: "PostgreSQL connected successfully",
+      time: result.rows[0],
+    });
+  } catch (error) {
+    console.error("DATABASE ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+      error: error?.message || "Unknown database error",
+    });
+  }
+});
+
+
+// =====================================================
+// USER REGISTRATION
+// =====================================================
+
+app.post("/api/register", async (req, res) => {
+  try {
+    const { name, email, mobile, password } = req.body;
+
+    // Check required fields
+    if (!name || !email || !mobile || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
+    }
+
+    // Check whether email already exists
+    const existingUser = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Email is already registered.",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert user
+    const result = await pool.query(
+      `INSERT INTO users (name, email, mobile, password)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, mobile, created_at`,
+      [name, email, mobile, hashedPassword]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Registration successful!",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Registration Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Registration failed.",
+      error: error.message,
+    });
+  }
+});
+
+// =====================================================
+// USER LOGIN
+// =====================================================
+
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    // Find user by email
+    const result = await pool.query(
+      "SELECT id, name, email, mobile, password FROM users WHERE email = $1",
+      [email.trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Compare entered password with hashed password
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Login successful
+    res.json({
+      success: true,
+      message: "Login successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+      },
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Login failed.",
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT id, name, email, mobile, created_at
+       FROM users
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Get User Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get user information",
+    });
+  }
+});
+
+
+app.get("/api/user/:id/interview-score", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT score
+       FROM interview_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        score: 0,
+      });
+    }
+
+    res.json({
+      success: true,
+      score: result.rows[0].score,
+    });
+  } catch (error) {
+    console.error("Interview Score Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get interview score.",
+    });
+  }
+});
+
+
+
+  app.get("/api/user/:id/resume-score", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT ats_score
+       FROM resume_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        atsScore: 0,
+      });
+    }
+
+    res.json({
+      success: true,
+      atsScore: result.rows[0].ats_score,
+    });
+  } catch (error) {
+    console.error("Resume Score Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get resume score.",
+    });
+  }
+});
+
+  app.get("/api/user/:id/coding-score", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT score
+       FROM coding_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        score: 0,
+      });
+    }
+
+    res.json({
+      success: true,
+      score: result.rows[0].score,
+    });
+  } catch (error) {
+    console.error("Coding Score Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get coding score.",
+    });
+  }
+});
+
+app.get("/api/user/:id/aptitude-score", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT score
+       FROM aptitude_results
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        score: 0,
+      });
+    }
+
+    res.json({
+      success: true,
+      score: result.rows[0].score,
+    });
+  } catch (error) {
+    console.error("Aptitude Score Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get aptitude score.",
+    });
+  }
+});
+
+
+app.get("/api/user/:id/roadmap-score", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT progress
+       FROM roadmap_progress
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        score: 0,
+      });
+    }
+
+    res.json({
+      success: true,
+      score: result.rows[0].progress,
+    });
+  } catch (error) {
+    console.error("Roadmap Score Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get roadmap score.",
+    });
+  }
+});
+
+
 // =====================================================
 // START SERVER
 // =====================================================

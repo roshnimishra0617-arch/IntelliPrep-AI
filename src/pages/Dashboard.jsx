@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   BrainCircuit,
@@ -15,67 +16,280 @@ function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [dbUser, setDbUser] = useState(user);
+  const [loading, setLoading] = useState(true);
+  
+  const [aiInterviewScore, setAiInterviewScore] = useState(0);
+  const [resumeScore, setResumeScore] = useState(0);
+  const [codingScore, setCodingScore] = useState(0);
+  const [aptitudeScore, setAptitudeScore] = useState(0);
+  const [roadmapScore, setRoadmapScore] = useState(0);
+  const [progressScore, setProgressScore] = useState(0);
+  const [interviewAttempts, setInterviewAttempts] = useState(0);
+  const [codingAttempts, setCodingAttempts] = useState(0);
+  const [aptitudeAttempts, setAptitudeAttempts] = useState(0);
+
+useEffect(() => {
+  const fetchUser = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setDbUser(data.user);
+      } else {
+        console.error(data.message);
+      }
+    } catch (error) {
+      console.error("Dashboard user error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchUser();
+}, [user]);
+
+// FETCH AI INTERVIEW SCORE
+useEffect(() => {
+  const fetchInterviewScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}/interview-score`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAiInterviewScore(data.score ?? 0);
+      }
+    } catch (error) {
+      console.error("Interview score error:", error);
+    }
+  };
+
+  fetchInterviewScore();
+}, [user]);
+
+// FETCH RESUME ATS SCORE
+useEffect(() => {
+  const fetchResumeScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}/resume-score`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResumeScore(data.atsScore);
+      }
+    } catch (error) {
+      console.error("Resume score error:", error);
+    }
+  };
+
+  fetchResumeScore();
+}, [user]);
+
+
+// FETCH CODING SCORE
+useEffect(() => {
+  const fetchCodingScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}/coding-score`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCodingScore(data.score ?? 0);
+      }
+    } catch (error) {
+      console.error("Coding score error:", error);
+    }
+  };
+
+  fetchCodingScore();
+}, [user]);
+
+
+// FETCH APTITUDE SCORE
+useEffect(() => {
+  const fetchAptitudeScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}/aptitude-score`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAptitudeScore(data.score ?? 0);
+      }
+    } catch (error) {
+      console.error("Aptitude score error:", error);
+    }
+  };
+
+  fetchAptitudeScore();
+}, [user]);
+
+
+// FETCH ROADMAP SCORE
+useEffect(() => {
+  const fetchRoadmapScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/user/${user.id}/roadmap-score`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRoadmapScore(data.score ?? 0);
+      }
+    } catch (error) {
+      console.error("Roadmap score error:", error);
+    }
+  };
+
+  fetchRoadmapScore();
+}, [user]);
+
+// FETCH OVERALL PROGRESS SCORE
+useEffect(() => {
+  const fetchProgressScore = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/progress/${user.id}`
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setProgressScore(data.progress?.overallScore ?? 0);
+
+        setInterviewAttempts(
+          data.progress?.interviewAttempts ?? 0
+        );
+
+        setCodingAttempts(
+          data.progress?.codingAttempts ?? 0
+        );
+
+        setAptitudeAttempts(
+          data.progress?.aptitudeAttempts ?? 0
+        );
+      }
+
+    } catch (error) {
+      console.error("Progress score error:", error);
+    }
+  };
+
+  fetchProgressScore();
+}, [user]);
+
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
   const preparationCards = [
-    {
-      title: "AI Interview",
-      description:
-        "Practice HR and technical interviews with AI-powered feedback.",
-      icon: <BrainCircuit size={30} />,
-      progress: "65%",
-      color: "text-cyan-400",
-      path: "/ai-interview",
-    },
-    {
-      title: "Resume Analyzer",
-      description:
-        "Analyze and improve your resume for better ATS performance.",
-      icon: <FileText size={30} />,
-      progress: "80%",
-      color: "text-green-400",
-      path: "/resume-analyzer",
-    },
-    {
-      title: "Coding Practice",
-      description:
-        "Solve coding problems and prepare for technical rounds.",
-      icon: <Code2 size={30} />,
-      progress: "55%",
-      color: "text-yellow-400",
-      path: "/coding-practice",
-    },
-    {
-      title: "Aptitude Tests",
-      description:
-        "Practice quantitative, logical and verbal reasoning with AI-generated questions.",
-      icon: <ClipboardCheck size={30} />,
-      progress: "70%",
-      color: "text-purple-400",
-      path: "/aptitude",
-    },
-    {
-      title: "Learning Roadmap",
-      description:
-        "Follow a personalized preparation plan for your target role.",
-      icon: <Target size={30} />,
-      progress: "45%",
-      color: "text-pink-400",
-      path: "/learning-roadmap",
-    },
-    {
-      title: "Progress Tracker",
-      description:
-        "Monitor your overall interview preparation journey.",
-      icon: <BarChart3 size={30} />,
-      progress: "68%",
-      color: "text-blue-400",
-      path: "/progress-tracker",
-    },
-  ];
+  {
+    title: "AI Interview",
+    description:
+      "Practice HR and technical interviews with AI-powered feedback.",
+    icon: <BrainCircuit size={30} />,
+    progress: aiInterviewScore,
+    color: "text-cyan-400",
+    path: "/ai-interview",
+  },
+
+  {
+    title: "Resume Analyzer",
+    description:
+      "Analyze and improve your resume for better ATS performance.",
+    icon: <FileText size={30} />,
+    progress: resumeScore,
+    color: "text-green-400",
+    path: "/resume-analyzer",
+  },
+
+  {
+    title: "Coding Practice",
+    description:
+      "Solve coding problems and prepare for technical rounds.",
+    icon: <Code2 size={30} />,
+    progress: codingScore,
+    color: "text-yellow-400",
+    path: "/coding-practice",
+  },
+
+  {
+    title: "Aptitude Tests",
+    description:
+      "Practice quantitative, logical and verbal reasoning with AI-generated questions.",
+    icon: <ClipboardCheck size={30} />,
+    progress: aptitudeScore,
+    color: "text-purple-400",
+    path: "/aptitude",
+  },
+
+  {
+    title: "Learning Roadmap",
+    description:
+      "Follow a personalized preparation plan for your target role.",
+    icon: <Target size={30} />,
+    progress: roadmapScore,
+    color: "text-pink-400",
+    path: "/learning-roadmap",
+  },
+
+  {
+    title: "Progress Tracker",
+    description:
+      "Monitor your overall interview preparation journey.",
+    icon: <BarChart3 size={30} />,
+    progress: progressScore,
+    color: "text-blue-400",
+    path: "/progress-tracker",
+  },
+];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
@@ -126,8 +340,13 @@ function Dashboard() {
           </p>
 
           <h1 className="text-4xl md:text-5xl font-bold">
-            {user?.name || "Student"}!
+            {dbUser?.name || "Student"}!
           </h1>
+
+          {/* User Email */}
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
+            {dbUser?.email}
+          </p>
 
           <p className="mt-3 text-gray-600 dark:text-gray-400">
             Continue your preparation and get closer to your dream job.
@@ -145,7 +364,7 @@ function Dashboard() {
             </p>
 
             <h2 className="text-3xl font-bold mt-2 text-cyan-500">
-              68%
+             {progressScore}%
             </h2>
           </div>
 
@@ -156,7 +375,7 @@ function Dashboard() {
             </p>
 
             <h2 className="text-3xl font-bold mt-2 text-green-500">
-              12
+              {interviewAttempts}
             </h2>
           </div>
 
@@ -167,7 +386,7 @@ function Dashboard() {
             </p>
 
             <h2 className="text-3xl font-bold mt-2 text-yellow-500">
-              48
+              {codingAttempts}
             </h2>
           </div>
 
@@ -178,7 +397,7 @@ function Dashboard() {
             </p>
 
             <h2 className="text-3xl font-bold mt-2 text-purple-500">
-              18
+              {aptitudeAttempts}
             </h2>
           </div>
 
@@ -231,7 +450,7 @@ function Dashboard() {
                   </span>
 
                   <span className="font-semibold">
-                    {card.progress}
+                    {card.progress}%
                   </span>
 
                 </div>
@@ -240,7 +459,7 @@ function Dashboard() {
 
                   <div
                     className="h-full bg-cyan-500 rounded-full"
-                    style={{ width: card.progress }}
+                    style={{ width: `${card.progress}%` }}
                   />
 
                 </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   BrainCircuit,
   ArrowLeft,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 
 function AIInterview() {
+  const { user } = useAuth();
   const [role, setRole] = useState("Software Engineer");
   const [interviewType, setInterviewType] = useState("Technical");
   const [difficulty, setDifficulty] = useState("Medium");
@@ -114,6 +116,7 @@ function AIInterview() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            userId: user.id,
             role,
             interviewType,
             difficulty,

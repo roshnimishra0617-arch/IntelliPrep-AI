@@ -8,6 +8,7 @@ import {
   Send,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 const technologies = [
   {
@@ -71,6 +72,7 @@ const difficulties = [
 const questionCounts = [5, 10, 15, 20];
 
 function CodingPractice() {
+  const { user } = useAuth();
   const [selectedTechnology, setSelectedTechnology] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
   const [selectedQuestionCount, setSelectedQuestionCount] = useState(5);
@@ -287,6 +289,7 @@ function CodingPractice() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: user.id,
           technology: selectedTechnology,
           difficulty: selectedDifficulty,
           question: selectedQuestion,

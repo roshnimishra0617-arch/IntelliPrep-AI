@@ -22,7 +22,7 @@ function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
 
     // Check all fields
@@ -67,19 +67,33 @@ function Register() {
 
     // For now, registration is handled on the frontend.
     // The actual backend/database can be connected later.
-    localStorage.setItem(
-      "prepvyera_registered_user",
-      JSON.stringify({
-        name,
-        email,
-        mobile,
-        password,
-      })
-    );
+    try {
+  const response = await fetch("http://localhost:5000/api/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: name.trim(),
+      email: email.trim(),
+      mobile: mobile.trim(),
+      password,
+    }),
+  });
 
-    alert("Registration successful! Please login.");
+  const data = await response.json();
 
-    navigate("/login");
+  if (!response.ok) {
+    alert(data.message || "Registration failed");
+    return;
+  }
+
+  alert("Registration successful! Please login.");
+  navigate("/login");
+} catch (error) {
+  console.error("Registration Error:", error);
+  alert("Unable to connect to the backend.");
+}
   };
 
   return (

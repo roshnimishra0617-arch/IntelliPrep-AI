@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 
 function Aptitude() {
+  const { user } = useAuth();
   const [stage, setStage] = useState("setup");
 
   const [category, setCategory] = useState(
@@ -278,6 +280,7 @@ function Aptitude() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            userId: user.id,
             category,
             difficulty,
             score: testResult.score,
